@@ -2,30 +2,84 @@
 require 'pathname'
 require 'yaml'
 require 'readline'
+require 'forwardable'
+require 'delegate'
 
 module XFlash
-  class Card < Struct.new(:id, :front, :back, :difficulty, :iteration, :last_shown)
-    def interval(i = iteration)
-      case i
-      when 0
-        0
-      when 1
-        1
-      when 2
-        6
-      else
-        interval(i-1) * difficulty
+  class DataPoint < Struct.new(:timestamp, :rating)
+    MAX_RATING=3
+
+    def neg_rating
+      MAX_RATING - rating
+    end
+
+    def fail?
+      rating == 0
+    end
+  end
+
+  class CardHistory < DelegateClass(Array)
+    EMPTY = new([].freeze)
+
+    extend Forwardable
+    def_delegators :card_state, :interval, :iteration, :factor
+
+    def << data_point
+      CardHistory.new (self + [data_point]).freeze
+    end
+
+    def card_state
+      inject(CardState.start, :+)
+    end
+  end
+
+  class CardState < Struct.new(:iteration, :streak, :factor, :interval)
+    INITIAL_INTERVALS = [1, 4]
+
+    def self.start
+      new(0, 0, 2.5, 1)
+    end
+
+    def +(data_point)
+      self.class.new(
+        iteration + 1,
+        next_streak(data_point),
+        next_factor(data_point),
+        next_interval(data_point)
+      )
+    end
+
+    def next_streak(data_point)
+      data_point.fail? ? 0 : streak + 1
+    end
+
+    def next_factor(data_point)
+      [factor + (0.1 - data_point.neg_rating * (0.28 + data_point.neg_rating * 0.02)), 1.3].max
+    end
+
+    def next_interval(data_point)
+      INITIAL_INTERVALS.fetch(next_streak(data_point)) do
+        interval * next_factor(data_point)
       end
     end
 
-    def rate(zero_to_five)
-      self.iteration += 1
-      complement = 5 - zero_to_five
-      self.difficulty = self.difficulty + (0.1 - complement * (0.08 + complement * 0.02))
+    def inspect
+      "<CardState iteration: %d, streak: %d, factor: %.2f, interval: %.2f>" % [iteration, streak, factor, interval]
+    end
+  end
+
+  class Card < Struct.new(:id, :front, :back, :history)
+    extend Forwardable
+    def_delegators :history, :card_state
+    def_delegators :card_state, :factor, :interval
+
+    def rate(rating)
+      self.history <<= DataPoint.new(Time.now, rating)
+      self
     end
 
     def inspect
-      "<%s %s>" % [front, %w[iteration difficulty interval].map {|k| "%s: %s" % [k, send(k)] }.join(', ')]
+      "<Card #{front} #{card_state.inspect}>"
     end
   end
 
@@ -40,8 +94,7 @@ module XFlash
     [7, '更新', "[geng1 xin1] /to replace the old with new/to renew/to renovate/to upgrade/to update/to regenerate/"],
     [8, '出力', "[chu1 li4] /to exert oneself/"],
     [9, '拌蒜', "[ban4 suan4] /to stagger (walk unsteadily)/"],
-  ].map{|args| Card.new(*args, 2.5, 0)}
-
+  ].map{|args| Card.new(*args, CardHistory::EMPTY)}
 
   class CardStore
     attr_reader :store
