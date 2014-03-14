@@ -5,6 +5,11 @@ require 'readline'
 require 'forwardable'
 require 'delegate'
 
+# DataPoint
+# CardHistory
+# CardState
+# Card
+
 module XFlash
   class DataPoint < Struct.new(:timestamp, :rating)
     MAX_RATING=3
@@ -120,26 +125,6 @@ module XFlash
     [9, '拌蒜', "[ban4 suan4] /to stagger (walk unsteadily)/"],
   ].map{|args| Card.new(*args, CardHistory::EMPTY)}
 
-  class CardStore
-    attr_reader :store
-
-    def initialize
-      @store = Store.new
-    end
-  end
-
-  class Store
-    LOCATION = Pathname('~').expand_path.join('.xflash')
-
-    def load
-      YAML.load(LOCATION.read)
-    end
-
-    def save(data)
-      LOCATION.write(YAML.dump(data))
-    end
-  end
-
   class App
     attr_reader :card, :cards
     def initialize(cards)
@@ -173,4 +158,25 @@ module XFlash
   end
 end
 
-XFlash::App.new(XFlash::FIXTURES).readline_loop
+XFlash::App.new(XFlash::FIXTURES.take(1)).readline_loop
+
+
+  # class Store
+  #   LOCATION = Pathname('~').expand_path.join('.xflash')
+
+  #   def load
+  #     YAML.load(LOCATION.read)
+  #   end
+
+  #   def save(data)
+  #     LOCATION.write(YAML.dump(data))
+  #   end
+  # end
+
+  # class CardStore
+  #   attr_reader :store
+
+  #   def initialize
+  #     @store = Store.new
+  #   end
+  # end
