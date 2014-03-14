@@ -37,34 +37,54 @@ module XFlash
     end
   end
 
-  class CardState < Struct.new(:iteration, :streak, :factor, :interval)
+  class BaseStrategy < Struct.new(:state, :data_point)
+    extend Forwardable
+    def_delegators :state, :iteration, :streak, :factor, :interval
+    def_delegators :data_point, :fail?, :rating, :neg_rating
+
+    def next_streak
+      fail? ? 0 : streak + 1
+    end
+  end
+
+  class SuperMemoStrategy < BaseStrategy
+    INITIAL_INTERVALS = [1, 6]
+
+    def next_factor
+      [factor + (0.1 - neg_rating * (0.28 + neg_rating * 0.02)), 1.3].max
+    end
+
+    def next_interval
+      INITIAL_INTERVALS.fetch(next_streak) do
+        interval * next_factor
+      end
+    end
+  end
+
+  class AnkiStrategy < BaseStrategy
     INITIAL_INTERVALS = [1, 4]
+
+    def next_factor
+      [factor + [0.15, 0, -0.15, -0.3].fetch(neg_rating) {0}, 1.3].max
+    end
+
+    def next_interval
+      INITIAL_INTERVALS.fetch(next_streak) do
+        interval * next_factor
+      end
+    end
+  end
+
+  class CardState < Struct.new(:iteration, :streak, :factor, :interval)
+    STRATEGY = AnkiStrategy
 
     def self.start
       new(0, 0, 2.5, 1)
     end
 
     def +(data_point)
-      self.class.new(
-        iteration + 1,
-        next_streak(data_point),
-        next_factor(data_point),
-        next_interval(data_point)
-      )
-    end
-
-    def next_streak(data_point)
-      data_point.fail? ? 0 : streak + 1
-    end
-
-    def next_factor(data_point)
-      [factor + (0.1 - data_point.neg_rating * (0.28 + data_point.neg_rating * 0.02)), 1.3].max
-    end
-
-    def next_interval(data_point)
-      INITIAL_INTERVALS.fetch(next_streak(data_point)) do
-        interval * next_factor(data_point)
-      end
+      strategy = STRATEGY.new(self, data_point)
+      self.class.new( iteration + 1, strategy.next_streak, strategy.next_factor, strategy.next_interval )
     end
 
     def inspect
