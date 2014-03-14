@@ -23,83 +23,44 @@ module XFlash
     end
   end
 
-  class CardHistory < Struct.new(:parent_history, :data_point)
-    EMPTY = CardHistory.new
+  # CardStates form a linked list, each pointing to the previous state plus
+  # the new data point. The actual factor/interval, streak are calculated
+  # recursively based on the previous value, and the new data point.
+  class CardState < Struct.new(:parent, :data_point)
+    STRATEGY = AnkiStrategy
+    EMPTY = CardState.new
 
-    extend Forwardable
-    def_delegators :card_state, :interval, :iteration, :factor
+    START = {
+      iteration: 0,
+      streak: 0,
+      factor: 2.5,
+      interval: 1
+    }
 
     def << data_point
-      CardHistory.new(self, data_point)
+      self.class.new(self, data_point)
     end
 
-    def card_state
-      if parent_history.nil?
-        CardState.start
-      else
-        parent_history.card_state + data_point
-      end
-    end
-  end
-
-  class BaseStrategy < Struct.new(:state, :data_point)
-    extend Forwardable
-    def_delegators :state, :iteration, :streak, :factor, :interval
-    def_delegators :data_point, :fail?, :rating, :neg_rating
-
-    def next_streak
-      fail? ? 0 : streak + 1
-    end
-  end
-
-  class SuperMemoStrategy < BaseStrategy
-    INITIAL_INTERVALS = [1, 6]
-
-    def next_factor
-      [factor + (0.1 - neg_rating * (0.28 + neg_rating * 0.02)), 1.3].max
+    def strategy
+      STRATEGY.new(parent, data_point)
     end
 
-    def next_interval
-      INITIAL_INTERVALS.fetch(next_streak) do
-        interval * next_factor
-      end
-    end
-  end
-
-  class AnkiStrategy < BaseStrategy
-    INITIAL_INTERVALS = [1, 4]
-
-    def next_factor
-      [factor + [0.15, 0, -0.15, -0.3].fetch(neg_rating) {0}, 1.3].max
+    def empty?
+      parent.nil?
     end
 
-    def next_interval
-      INITIAL_INTERVALS.fetch(next_streak) do
-        interval * next_factor
-      end
-    end
-  end
-
-  class CardState < Struct.new(:iteration, :streak, :factor, :interval)
-    STRATEGY = AnkiStrategy
-
-    def self.start
-      new(0, 0, 2.5, 1)
-    end
-
-    def +(data_point)
-      strategy = STRATEGY.new(self, data_point)
-      self.class.new( iteration + 1, strategy.next_streak, strategy.next_factor, strategy.next_interval )
-    end
+    def iteration ; empty? ? START[:iteration] : parent.iteration + 1   end
+    def streak    ; empty? ? START[:streak]    : strategy.next_streak   end
+    def factor    ; empty? ? START[:factor]    : strategy.next_factor   end
+    def interval  ; empty? ? START[:interval]  : strategy.next_interval end
 
     def inspect
-      "<CardState iteration: %d, streak: %d, factor: %.2f, interval: %.2f>" % [iteration, streak, factor, interval]
+      "<#{self.class} iteration: %d, streak: %d, factor: %.2f, interval: %.2f>" % [iteration, streak, factor, interval]
     end
   end
 
-  class Card < Struct.new(:id, :front, :back, :history)
+  class Card < Struct.new(:id, :front, :back, :card_state)
     extend Forwardable
-    def_delegators :history, :card_state
     def_delegators :card_state, :factor, :interval
 
     def rate(rating)
@@ -123,7 +84,7 @@ module XFlash
     [7, '更新', "[geng1 xin1] /to replace the old with new/to renew/to renovate/to upgrade/to update/to regenerate/"],
     [8, '出力', "[chu1 li4] /to exert oneself/"],
     [9, '拌蒜', "[ban4 suan4] /to stagger (walk unsteadily)/"],
-  ].map{|args| Card.new(*args, CardHistory::EMPTY)}
+  ].map{|args| Card.new(*args, CardState::EMPTY)}
 
   class App
     attr_reader :card, :cards
