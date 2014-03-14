@@ -18,18 +18,22 @@ module XFlash
     end
   end
 
-  class CardHistory < DelegateClass(Array)
-    EMPTY = new([].freeze)
+  class CardHistory < Struct.new(:parent_history, :data_point)
+    EMPTY = CardHistory.new
 
     extend Forwardable
     def_delegators :card_state, :interval, :iteration, :factor
 
     def << data_point
-      CardHistory.new (self + [data_point]).freeze
+      CardHistory.new(self, data_point)
     end
 
     def card_state
-      inject(CardState.start, :+)
+      if parent_history.nil?
+        CardState.start
+      else
+        parent_history.card_state + data_point
+      end
     end
   end
 
