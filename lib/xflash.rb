@@ -5,14 +5,11 @@ require 'readline'
 require 'forwardable'
 require 'delegate'
 
-# DataPoint
-# CardHistory
-# CardState
-# Card
+require_relative 'xflash/strategies'
 
 module XFlash
-  class DataPoint < Struct.new(:timestamp, :rating)
-    MAX_RATING=3
+  class Rating < Struct.new(:timestamp, :rating)
+    MAX_RATING = 3
 
     def neg_rating
       MAX_RATING - rating
@@ -64,7 +61,7 @@ module XFlash
     def_delegators :card_state, :factor, :interval
 
     def rate(rating)
-      self.history <<= DataPoint.new(Time.now, rating)
+      self.card_state <<= Rating.new(Time.now, rating)
       self
     end
 
@@ -120,24 +117,3 @@ module XFlash
 end
 
 XFlash::App.new(XFlash::FIXTURES.take(1)).readline_loop
-
-
-  # class Store
-  #   LOCATION = Pathname('~').expand_path.join('.xflash')
-
-  #   def load
-  #     YAML.load(LOCATION.read)
-  #   end
-
-  #   def save(data)
-  #     LOCATION.write(YAML.dump(data))
-  #   end
-  # end
-
-  # class CardStore
-  #   attr_reader :store
-
-  #   def initialize
-  #     @store = Store.new
-  #   end
-  # end
