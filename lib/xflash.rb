@@ -10,14 +10,19 @@ require_relative 'xflash/strategies'
 module XFlash
   class Rating < Struct.new(:timestamp, :rating)
     MAX_RATING = 3
+    FAIL = 0
+    HARD = 1
+    GOOD = 2
+    EASY = 3
 
     def neg_rating
       MAX_RATING - rating
     end
 
-    def fail?
-      rating == 0
-    end
+    def fail? ; rating == FAIL end
+    def hard? ; rating == HARD end
+    def good? ; rating == GOOD end
+    def easy? ; rating == EASY end
   end
 
   # CardStates form a linked list, each pointing to the previous state plus
@@ -46,6 +51,14 @@ module XFlash
       parent.nil?
     end
 
+    def data_points(&blk)
+      return to_enum(__method__) unless block_given?
+      unless empty?
+        parent.data_points(&blk)
+        yield data_point
+      end
+    end
+
     def iteration ; empty? ? START[:iteration] : parent.iteration + 1   end
     def streak    ; empty? ? START[:streak]    : strategy.next_streak   end
     def factor    ; empty? ? START[:factor]    : strategy.next_factor   end
@@ -69,19 +82,6 @@ module XFlash
       "<Card #{front} #{card_state.inspect}>"
     end
   end
-
-  FIXTURES = [
-    [0, '入選', "(入选) [ru4 xuan3] /to be chosen/to be elected as/"],
-    [1, '報名', "(报名) [bao4 ming2] /to sign up/to enter one's name/to apply/to register/to enroll/to enlist/"],
-    [2, '訊息', "(讯息) [xun4 xi1] /information/news/message/text message or SMS/"],
-    [3, '詢問', "(询问) [xun2 wen4] /to inquire/"],
-    [4, '導致', "(导致) [dao3 zhi4] /to lead to/to create/to cause/to bring about/"],
-    [5, '琴', "[qin2] /guqin or zither, cf 古琴[gu3 qin2]/musical instrument in general/"],
-    [6, '提供', "[ti2 gong1] /to offer/to supply/to provide/to furnish/"],
-    [7, '更新', "[geng1 xin1] /to replace the old with new/to renew/to renovate/to upgrade/to update/to regenerate/"],
-    [8, '出力', "[chu1 li4] /to exert oneself/"],
-    [9, '拌蒜', "[ban4 suan4] /to stagger (walk unsteadily)/"],
-  ].map{|args| Card.new(*args, CardState::EMPTY)}
 
   class App
     attr_reader :card, :cards
@@ -115,5 +115,7 @@ module XFlash
     end
   end
 end
+
+require_relative 'xflash/fixtures'
 
 XFlash::App.new(XFlash::FIXTURES.take(1)).readline_loop
