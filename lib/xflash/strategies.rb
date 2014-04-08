@@ -24,8 +24,8 @@ module XFlash
   end
 
   class AnkiStrategy < BaseStrategy
-    LEARNING_INTERVALS = [0, 1, 10, 25]
-    INITIAL_INTERVALS  = [1.0, 4.0].map {|min| min*60*24 }
+    LEARNING_INTERVALS = [0, 1, 10, 25].map(&:to_f)
+    INITIAL_INTERVALS  = [1, 2].map {|min| min*60*24 }.map(&:to_f)
     LEARNING_STEPS     = LEARNING_INTERVALS.length - 1
 
     def learning?
@@ -48,6 +48,11 @@ module XFlash
       end
     end
 
+    # Good enough for our purposes, and stable for a given card-state
+    def pseudo_rand
+      data_point.timestamp.to_f % 1
+    end
+
     def next_interval
       if learning?
         LEARNING_INTERVALS.fetch(-steps_to_graduation)
@@ -55,7 +60,7 @@ module XFlash
         INITIAL_INTERVALS.fetch(next_streak) do
           interval * next_factor
         end
-      end
+      end * (0.8 + pseudo_rand * 0.4) # 0.8 - 1.2
     end
   end
 end

@@ -35,11 +35,15 @@ module XFlash
     end
 
     def last_shown
-      data_points.last.timestamp
+      data_points.to_a.last.timestamp
     end
 
     def expired?(time)
-      time - last_shown < interval * 60
+      (!empty? && data_point.fail?) || expired_for_seconds(time) > 0
+    end
+
+    def expired_for_seconds(time)
+      empty? ? 0 : [time - last_shown - interval * 60, 0].max
     end
 
     def iteration ; empty? ? START[:iteration] : parent.iteration + 1   end
