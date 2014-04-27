@@ -1,3 +1,3 @@
-module Engine
+module Srsly
   VERSION = '0.0.0'
 end

@@ -1,4 +1,4 @@
-module XFlash
+module Srsly
 
   # CardStates form a linked list, each pointing to the previous state plus
   # the new data point. The actual factor/interval, streak are calculated

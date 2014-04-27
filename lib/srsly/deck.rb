@@ -1,4 +1,4 @@
-module XFlash
+module Srsly
   class Deck < DelegateClass(Array)
     %w[select map reject grep reverse sort_by sort].each do |array_method|
       define_method array_method do |*args, &blk|

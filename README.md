@@ -1,1 +1,1 @@
-Flashcard Engine with Spaced Repetition
+Flashcard Srsly with Spaced Repetition
