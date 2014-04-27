@@ -1,4 +1,4 @@
-module XFlash
+module Engine
   class CLI
     attr_reader :card, :cards
     def initialize(cards)

@@ -1,4 +1,4 @@
-module XFlash
+module Engine
   class BaseStrategy < Struct.new(:card_state, :data_point)
     extend Forwardable
     def_delegators :card_state, :data_points, :iteration, :streak, :factor, :interval

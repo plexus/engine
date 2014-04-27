@@ -1,4 +1,4 @@
-module XFlash
+module Engine
   class Rating < Struct.new(:timestamp, :rating)
     MAX_RATING = 3
     FAIL = 0

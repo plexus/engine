@@ -1,4 +1,4 @@
-module XFlash
+module Engine
   class Card < Struct.new(:data, :card_state)
     extend Forwardable
     def_delegators :card_state, :factor, :iteration, :streak, :interval, :expired?, :expired_for_seconds, :last_shown

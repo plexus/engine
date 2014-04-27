@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-module XFlash
+module Engine
   FIXTURES = [
     [ '入選', "(入选) [ru4 xuan3] /to be chosen/to be elected as/" ],
     [ '報名', "(报名) [bao4 ming2] /to sign up/to enter one's name/to apply/to register/to enroll/to enlist/" ],
